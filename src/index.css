@@ -100,6 +100,15 @@ tbody tr:nth-child(odd) {
   padding: 1em 2em;
 }
 
+/* added to place nav links side by side */
+.nav-list {
+  display: flex;
+  list-style: none;
+  gap: 20px;;
+  padding: 0;
+  margin: 0;
+}
+
 .nav-item {
   padding: 0 0.5rem;
   list-style: none;
