@@ -5,8 +5,20 @@ const SavedCandidates = () => {
   const [savedCandidates, setSavedCandidates] = useState<Candidate[]>([]);
 
   useEffect(() => {
-    const storedCandidates = JSON.parse(localStorage.getItem("savedCandidates") || "[]");
-    setSavedCandidates(storedCandidates);
+    try {
+      const storedCandidates = JSON.parse(localStorage.getItem("savedCandidates") || "[]");
+
+      if (Array.isArray(storedCandidates)) {
+        const filteredCandidates = storedCandidates.filter((candidate) => candidate && typeof candidate === "object" && candidate.login);
+        setSavedCandidates(filteredCandidates);
+      } else {
+        console.warn("Invalid data found in localStorage, resetting...");
+        setSavedCandidates([]);
+      }
+    } catch (error) {
+      console.error("Error parsing savedCandidates from localStorage:", error);
+      setSavedCandidates([]);
+    }
   }, []);
 
   const handleRemove = (username: string) => {
@@ -24,7 +36,7 @@ const SavedCandidates = () => {
         <ul>
           {savedCandidates.map((candidate) => (
             <li key={candidate.login}>
-              <img src={candidate.avatar_url} alt={candidate.login}  width="50" />
+              <img src={candidate.avatar_url} alt={candidate.login} width="50" />
               <h2>{candidate.login}</h2>
               <p>Location: {candidate.location || "Not available"}</p>
               <p>Email: {candidate.email || "Not available"}</p>
@@ -34,13 +46,13 @@ const SavedCandidates = () => {
                 View Profile
               </a>
               <button onClick={() => handleRemove(candidate.login)}>Remove</button>
-              </li>
+            </li>
           ))}
-          </ul>
-        )}
-              </div>
+        </ul>
+      )}
+    </div>
   );
 };
-            
-          
+
+
 export default SavedCandidates;

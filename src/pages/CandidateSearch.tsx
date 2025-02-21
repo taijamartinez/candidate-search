@@ -12,52 +12,65 @@ const CandidateSearch = () => {
   useEffect(() => {
     const fetchCandidates = async () => {
       const basicCandidates = await searchGithub();
+
       if (basicCandidates.length > 0) {
         try {
-        // Fetch full details of the first candidate
-        const fullCandidate = await searchGithubUser(basicCandidates[0].login);
-        setCandidates(basicCandidates);
-        setCurrentCandidate(fullCandidate);
-      } catch (error) {
-        console.error("❌ Error fetching full candidate details:", error);
+          const enrichedCandidates = await Promise.all(
+            basicCandidates.map(async (candidate: Candidate) => {
+              try {
+                const fullCandidate = await searchGithubUser(candidate.login);
+                return fullCandidate && fullCandidate.login ? fullCandidate : null;
+              } catch (error) {
+                console.error(`Error fetching details for ${candidate.login}:`, error);
+                return null; // Skip invalid candidates
+              }
+            })
+          );
+
+          // Remove null values (invalid candidates)
+          const validCandidates = enrichedCandidates.filter((c) => c !== null);
+
+          if (validCandidates.length > 0) {
+            setCandidates(validCandidates);
+            setCurrentCandidate(validCandidates[0]);
+          } else {
+            console.warn("No valid candidates retrieved.");
+          }
+        } catch (error) {
+          console.error("Error enriching candidates:", error);
+        }
+      } else {
+        console.warn("No candidates found from GitHub API.");
       }
-    } else {
-      console.warn("⚠️ Warning: Received an invalid candidate from GitHub API.");
-    }
-  
     };
+
     fetchCandidates();
   }, []);
 
-  const handleAccept = async () => {
-    if (candidates.length > 0) {
-      try{
-      const fullCandidateDetails = await searchGithubUser(candidates[0].login); 
 
-      console.log("Full API Response:", fullCandidateDetails);
+  const handleAccept = () => {
+    if (currentCandidate) {
+      const updatedSaved = [...savedCandidates, {
+        login: currentCandidate.login,
+        avatar_url: currentCandidate.avatar_url,
+        location: currentCandidate.location || "Not available",
+        email: currentCandidate.email || "Not available",
+        company: currentCandidate.company || "Not available",
+        bio: currentCandidate.bio || "Not available",
+        html_url: currentCandidate.html_url
+      }];
 
-      // Check if required fields exist
-      if (!fullCandidateDetails.location && !fullCandidateDetails.email && !fullCandidateDetails.company && !fullCandidateDetails.bio) {
-        console.warn("Warning: API is not returning full user details.");
-      }
-  
-      const updatedSaved = [...savedCandidates, fullCandidateDetails];
       setSavedCandidates(updatedSaved);
       localStorage.setItem('savedCandidates', JSON.stringify(updatedSaved));
-    } catch (error) {
-      console.error("Error fetching candidate details:", error);
     }
-  }
-    handleNext(); 
+    handleNext();
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (candidates.length > 1) {
-      // Remove the first candidate and fetch full details of the next one
       const remainingCandidates = candidates.slice(1);
-      const nextCandidate = await searchGithubUser(remainingCandidates[0].login);
       setCandidates(remainingCandidates);
-      setCurrentCandidate(nextCandidate);
+      setCurrentCandidate(remainingCandidates[0]);
     } else {
       setCandidates([]);
       setCurrentCandidate(null);
@@ -89,4 +102,3 @@ const CandidateSearch = () => {
 };
 
 export default CandidateSearch;
-
